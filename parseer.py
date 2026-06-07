@@ -83,9 +83,48 @@ class parser:
 
         except FileNotFoundError:
             print(f"le fichier {file} n existe pas")
-class drone:
-    def __init__(self, nom, chemin, ):
-        
+
+
+class Drone:
+    def __init__(self, nom, chemin, index_station, etat_vol):
+        self.nom = nom
+        self.chemin = chemin
+        self.index_station = index_station
+        self.etat_vol = etat_vol
+
+
+class simulateur():
+    def __init__(self, txt):
+        self.carte = parser(txt)
+        self.chemin = algo_dijkstra(self.carte)
+        self.listes_drones = []
+        self.nbr_drones = self.carte.ma_carte.nbr_drone
+        for i in range(1, self.nbr_drones+1):
+            self.listes_drones.append(Drone(f"D{i}", self.chemin, 0, 0))
+
+    def moteur(self):
+        while min(self.listes_drones, key=lambda x: x.index_station) < (len(self.chemin) - 1):
+            self.listes_drones.sort(key=lambda x: x.index_staton, reverse=True)
+            boite_operations = []
+            for drone_actuelle in self.listes_drones:
+                if drone_actuelle.index_station == (len(drone_actuelle.chemin) - 1):
+                    continue
+                elif drone_actuelle.etat_vol == 1:
+                    drone_actuelle.index_station += 1
+                    drone_actuelle.etat_vol = 0
+                    boite_operations.append(f"{drone_actuelle.nom}-{self.chemin[drone_actuelle.index_station]}")
+                    continue
+                else:
+                    i = 0
+                    for element in self.listes_drones:
+                        if element.chemin[element.index_station] == drone_actuelle.chmemin[drone_actuelle.index_station]:
+                            i += 1
+                    if i < self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station]].parking:
+                        drone_actuelle.index_station += 1
+                        boite_operations.append(f"{drone_actuelle.nom}-{self.chemin[drone_actuelle.index_station]}")
+
+                print(boite_operations)
+
 
 def algo_dijkstra(maap):
     scores = {}
@@ -134,4 +173,3 @@ def algo_dijkstra(maap):
 
     chemin_finale.reverse()
     return chemin_finale
-
