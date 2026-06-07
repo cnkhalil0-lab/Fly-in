@@ -103,27 +103,26 @@ class simulateur():
             self.listes_drones.append(Drone(f"D{i}", self.chemin, 0, 0))
 
     def moteur(self):
-        while min(self.listes_drones, key=lambda x: x.index_station) < (len(self.chemin) - 1):
-            self.listes_drones.sort(key=lambda x: x.index_staton, reverse=True)
+        while min(self.listes_drones, key=lambda x: x.index_station).index_station < (len(self.chemin) - 1):
+            self.listes_drones.sort(key=lambda x: x.index_station, reverse=True)
             boite_operations = []
             for drone_actuelle in self.listes_drones:
                 if drone_actuelle.index_station == (len(drone_actuelle.chemin) - 1):
                     continue
                 elif drone_actuelle.etat_vol == 1:
-                    drone_actuelle.index_station += 1
                     drone_actuelle.etat_vol = 0
-                    boite_operations.append(f"{drone_actuelle.nom}-{self.chemin[drone_actuelle.index_station]}")
-                    continue
                 else:
                     i = 0
                     for element in self.listes_drones:
-                        if element.chemin[element.index_station] == drone_actuelle.chmemin[drone_actuelle.index_station]:
+                        if element.chemin[element.index_station] == drone_actuelle.chemin[(drone_actuelle.index_station)+1]:
                             i += 1
-                    if i < self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station]].parking:
+                    if i < self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station + 1]].parking:
                         drone_actuelle.index_station += 1
                         boite_operations.append(f"{drone_actuelle.nom}-{self.chemin[drone_actuelle.index_station]}")
-
-                print(boite_operations)
+                        if self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station]].type == "restricted":
+                            drone_actuelle.etat_vol = 1
+                if len(boite_operations) > 0:
+                    print(boite_operations)
 
 
 def algo_dijkstra(maap):
