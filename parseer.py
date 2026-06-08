@@ -1,4 +1,5 @@
 
+
 class Zone:
     def __init__(self, nom, x, y, couleur=None, parking=1, type="normal"):
         self.nom = nom
@@ -103,7 +104,7 @@ class simulateur():
             self.listes_drones.append(Drone(f"D{i}", self.chemin, 0, 0))
 
     def moteur(self):
-        while min(self.listes_drones, key=lambda x: x.index_station).index_station < (len(self.chemin) - 1):
+        while min(self.listes_drones, key=lambda x: x.index_station).index_station < (len(self.chemin)-1):
             self.listes_drones.sort(key=lambda x: x.index_station, reverse=True)
             boite_operations = []
             for drone_actuelle in self.listes_drones:
@@ -112,17 +113,21 @@ class simulateur():
                 elif drone_actuelle.etat_vol == 1:
                     drone_actuelle.etat_vol = 0
                 else:
-                    i = 0
-                    for element in self.listes_drones:
-                        if element.chemin[element.index_station] == drone_actuelle.chemin[(drone_actuelle.index_station)+1]:
-                            i += 1
-                    if i < self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station + 1]].parking:
+                    if drone_actuelle.chemin[drone_actuelle.index_station + 1] != self.carte.ma_carte.arrivee.nom:
+                        i = 0
+                        for element in self.listes_drones:
+                            if element.chemin[element.index_station] == drone_actuelle.chemin[(drone_actuelle.index_station)+1]:
+                                i += 1
+                        if i < self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station + 1]].parking:
+                            drone_actuelle.index_station += 1
+                            boite_operations.append(f"{drone_actuelle.nom}-{self.chemin[drone_actuelle.index_station]}")
+                            if self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station]].type == "restricted":
+                                drone_actuelle.etat_vol = 1
+                    elif drone_actuelle.index_station < (len(self.chemin)-1):
                         drone_actuelle.index_station += 1
                         boite_operations.append(f"{drone_actuelle.nom}-{self.chemin[drone_actuelle.index_station]}")
-                        if self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station]].type == "restricted":
-                            drone_actuelle.etat_vol = 1
-                if len(boite_operations) > 0:
-                    print(boite_operations)
+            if len(boite_operations) > 0:
+                print(boite_operations)
 
 
 def algo_dijkstra(maap):
@@ -172,3 +177,7 @@ def algo_dijkstra(maap):
 
     chemin_finale.reverse()
     return chemin_finale
+
+
+objet = simulateur("test2.txt")
+objet.moteur()

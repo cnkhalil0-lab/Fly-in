@@ -1,0 +1,28 @@
+# --- FICHIER DE TEST OFFICIEL ---
+# (Les lignes qui commencent par un hashtag doivent être ignorées)
+
+nb_drones: 5
+
+# --- LES STATIONS ---
+start_hub: base_depart 45 0
+end_hub: zone_finale 100 100
+
+# Des hubs simples (sans crochets)
+hub: relais_A 20 50
+hub: relais_B 50 20
+
+# Des hubs complexes (avec crochets, et l'ordre change !)
+hub: corridor_X 50 80 [color=green parking=3]
+hub: zone_VIP 80 50 [parking=2 color=purple]
+hub: corridorA 4 3 [zone=priority color=green max_drones=2]
+
+# --- LES ROUTES ---
+# Connexions simples
+connection: base_depart-relais_A
+connection: base_depart-relais_B
+
+# Connexions complexes (avec crochets pour la largeur de la route)
+connection: relais_A-corridor_X [max_link_capacity=2]
+connection: relais_B-zone_VIP [max_link_capacity=1]
+connection: corridor_X-zone_finale [max_link_capacity=4]
+connection: zone_VIP-zone_finale

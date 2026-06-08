@@ -1,0 +1,9 @@
+nb_drones: 3
+start_hub: Depart 0 0 [max_drones=5]
+end_hub: Arrivee 10 0 [max_drones=5]
+hub: Goulet_Etranglement 3 0 [max_drones=1]
+hub: Zone_Tempete 6 0 [max_drones=2 zone=restricted]
+
+connection: Depart-Goulet_Etranglement
+connection: Goulet_Etranglement-Zone_Tempete
+connection: Zone_Tempete-Arrivee
