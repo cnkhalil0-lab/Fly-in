@@ -1,3 +1,4 @@
+import sys
 
 
 class Zone:
@@ -58,27 +59,30 @@ class parser:
                                 elif cle == "max_drones":
                                     paarking = int(valeur)
                                     if paarking < 1:
-                                        return (f"Error: le max des drones dans la station est invalide - ligne {self.compt_ligne}")
+                                        print(f"Error: le max des drones dans la station est invalide - ligne {self.compt_ligne}")
+                                        sys.exit(1)
                                 elif cle == "max_link_capacity":
                                     max_link_capacity = valeur
                                 elif cle == "zone":
                                     type_zone = valeur
-                                    if type_zone not in ["normal", "restricted", "bloqued"]:
-                                        return (f"Error: type de zone non reconnue - ligne {self.compt_ligne}")
+                                    if type_zone not in ["normal", "restricted", "bloqued", "priority"]:
+                                        print(f"Error: type de zone non reconnue - ligne {self.compt_ligne}")
+                                        sys.exit(1)
 
                     if args1[0] == ("start_hub:"):
                         self.ma_carte.depart = Zone(args1[1], int(args1[2]), int(args1[3]), couleur, paarking, type_zone)
                         self.ma_carte.zones[self.ma_carte.depart.nom] = self.ma_carte.depart
                         self.compt_start += 1
                         if self.compt_start > 1:
-                            return (f"Error: la map contient plusieurs station de depart - ligne {self.compt_ligne}")
-
+                            print(f"Error: la map contient plusieurs station de depart - ligne {self.compt_ligne}")
+                            sys.exit(1)
                     elif args1[0] == ("end_hub:"):
                         self.ma_carte.arrivee = Zone(args1[1], int(args1[2]), int(args1[3]), couleur, int(paarking), type_zone)
                         self.ma_carte.zones[self.ma_carte.arrivee.nom] = self.ma_carte.arrivee
                         self.compt_end += 1
                         if self.compt_end > 1:
-                            return (f"Error: la map contient plusieurs station d arrivee - ligne {self.compt_ligne}")
+                            print(f"Error: la map contient plusieurs station d arrivee - ligne {self.compt_ligne}")
+                            sys.exit(1)
 
                     elif args1[0] == ("hub:"):
                         self.ma_carte.zones[args1[1]] = Zone(args1[1], int(args1[2]), int(args1[3]), couleur, int(paarking), type_zone)
@@ -89,32 +93,23 @@ class parser:
                             self.ma_carte.zones[option_args1[0]].add_voisins(self.ma_carte.zones[option_args1[1]], int(max_link_capacity))
                             self.ma_carte.zones[option_args1[1]].add_voisins(self.ma_carte.zones[option_args1[0]], int(max_link_capacity))
                         except KeyError:
-                            return (f"station introuvable - ligne : {self.compt_ligne}")
+                            print(f"station introuvable - ligne : {self.compt_ligne}")
+                            sys.exit(1)
                     elif args1[0] == "nb_drones:":
                         self.ma_carte.nbr_drone = int(args1[1])
                         if self.ma_carte.nbr_drone < 1:
-                            return (f"nombre de drone invalide{self.compt_ligne}")
+                            print(f"nombre de drone invalide{self.compt_ligne}")
+                            sys.exit(1)
                     self.compt_ligne += 1
                 if self.compt_start == 0:
-                    return ("Error: station de depart introuvable")
+                    print("Error: station de depart introuvable")
+                    sys.exit(1)
                 if self.compt_end == 0:
-                    return ("Error: station d arrivee introuvable")
+                    print("Error: station d arrivee introuvable")
+                    sys.exit(1)
 
         except FileNotFoundError:
             print(f"le fichier {file} n existe pas")
-
-    # def blindage_parser(self):
-    #     if self.ma_carte.nbr_drone < 1:
-    #         return "nombre de drone invalide"
-    #     if self.compt_end != 1 or self.compt_start != 1:
-    #         if self.compt_end == 0:
-    #             return ("Error: station d arrivee introuvable")
-    #         elif self.compt_end > 1:
-    #             return ("Error: la map contientplusieurs station d arrivee")
-    #         if self.compt_start == 0:
-    #             return ("Error: station d arrivee introuvable")
-    #         elif self.compt_start > 1:
-    #             return ("Error: la map contientplusieurs station d arrivee")
 
 
 class Drone:
@@ -133,8 +128,20 @@ class simulateur():
         self.chemins = algo_bahandri(self.carte_algo)
         self.listes_drones = []
         self.nbr_drones = self.carte.ma_carte.nbr_drone
+        self.data_chemins = []
+        for i in range(len(self.chemins)):
+            self.data_chemins.append(self.eval_chemin(self.chemins[i], self.carte))
+
         for i in range(1, self.nbr_drones+1):
-            self.listes_drones.append(Drone(f"D{i}", self.chemin, 0, 0))
+            meilleur_trajet = float('inf')
+            for a in range(len(self.data_chemins)):
+                score = self.data_chemins[a]["chrono"] + (self.data_chemins[a]["nbr_drone_enchemin"] // self.data_chemins[a]["debit"])
+                if score < meilleur_trajet:
+                    meilleur_trajet = score
+                    index = a
+
+            self.listes_drones.append(Drone(f"D{i}", self.data_chemins[index]["trajet"], 0, 0))
+            self.data_chemins[index]["nbr_drone_enchemin"] += 1
 
     def moteur(self):
         COULEURS = {
@@ -145,8 +152,11 @@ class simulateur():
                     "yellow": "\033[93m",
                     "cyan": "\033[96m"
                 }
-        while min(self.listes_drones, key=lambda x: x.index_station).index_station < (len(self.chemin)-1):
-            self.listes_drones.sort(key=lambda x: x.index_station, reverse=True)
+        tous_arrivee = False
+        historique_boite_operations = []
+        while tous_arrivee is not True:
+            tous_arrivee = True
+            self.listes_drones.sort(key=lambda drone: len(drone.chemin) - drone.index_station)
             boite_operations = []
             journal_opperations = {}
             for drone_actuelle in self.listes_drones:
@@ -154,12 +164,20 @@ class simulateur():
                     continue
                 elif drone_actuelle.etat_vol == 1:
                     drone_actuelle.etat_vol = 0
+                    couleurr = self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station]].couleur
+                    if couleurr in COULEURS:
+                        ma_couleur = COULEURS[couleurr]
+                    else:
+                        ma_couleur = ""
+                    boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
+                    tous_arrivee = False
                 else:
+                    tous_arrivee = False
                     ma_route = f"{drone_actuelle.chemin[drone_actuelle.index_station]}-{drone_actuelle.chemin[drone_actuelle.index_station + 1]}"
                     journal_opperations[ma_route] = journal_opperations.get(ma_route, 0)
-                    max_support_route = self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station]].vois[self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station + 1]]]
+                    max_support_route = self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station]].vois[self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station + 1]]]
 
-                    couleurr = self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station + 1]].couleur
+                    couleurr = self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station + 1]].couleur
                     if couleurr in COULEURS:
                         ma_couleur = COULEURS[couleurr]
                     else:
@@ -169,22 +187,41 @@ class simulateur():
                         for element in self.listes_drones:
                             if element.chemin[element.index_station] == drone_actuelle.chemin[(drone_actuelle.index_station)+1]:
                                 i += 1
-                        if i < self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station + 1]].parking:
+                        if i < self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station + 1]].parking:
                             if journal_opperations[ma_route] < max_support_route:
                                 drone_actuelle.index_station += 1
-                                journal_opperations[ma_route] += 1
-                                boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{self.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
-                                if self.carte.ma_carte.zones[self.chemin[drone_actuelle.index_station]].type == "restricted":
+                                if self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station]].type == "restricted":
                                     drone_actuelle.etat_vol = 1
+                                    boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station - 1]}-{drone_actuelle.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
+                                else:
+                                    boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
+                                journal_opperations[ma_route] += 1
 
-                    elif drone_actuelle.index_station < (len(self.chemin)-1):
+                    elif drone_actuelle.index_station < (len(drone_actuelle.chemin)-1):
                         if journal_opperations[ma_route] < max_support_route:
                             drone_actuelle.index_station += 1
                             journal_opperations[ma_route] += 1
-                            boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{self.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
+                            boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
 
             if len(boite_operations) > 0:
-                print(boite_operations)
+                historique_boite_operations.append(boite_operations)
+        return historique_boite_operations
+
+    def eval_chemin(self, chemin, map):
+        chrono = 0
+        debit = float('inf')
+        for i in range(1, (len(chemin))):
+            if map.ma_carte.zones[chemin[i]].type in ["normal", "priority"]:
+                chrono += 1
+            else:
+                chrono += 2
+        for i in range(len(chemin)-1):
+            if chemin[i] != map.ma_carte.depart.nom and chemin[i] != map.ma_carte.arrivee.nom:
+                if debit > map.ma_carte.zones[chemin[i]].parking:
+                    debit = map.ma_carte.zones[chemin[i]].parking
+            if debit > map.ma_carte.zones[chemin[i]].vois[map.ma_carte.zones[chemin[i+1]]]:
+                debit = map.ma_carte.zones[chemin[i]].vois[map.ma_carte.zones[chemin[i+1]]]
+        return {"trajet": chemin, "chrono": chrono, "debit": debit, "nbr_drone_enchemin": 0}
 
 
 def algo_bahandri(map):
