@@ -1,4 +1,6 @@
 import sys
+import os
+import time
 
 
 class Zone:
@@ -144,14 +146,7 @@ class simulateur():
             self.data_chemins[index]["nbr_drone_enchemin"] += 1
 
     def moteur(self):
-        COULEURS = {
-                    "red": "\033[91m",
-                    "blue": "\033[94m",
-                    "green": "\033[92m",
-                    "reset": "\033[0m",
-                    "yellow": "\033[93m",
-                    "cyan": "\033[96m"
-                }
+
         tous_arrivee = False
         historique_boite_operations = []
         while tous_arrivee is not True:
@@ -164,12 +159,12 @@ class simulateur():
                     continue
                 elif drone_actuelle.etat_vol == 1:
                     drone_actuelle.etat_vol = 0
-                    couleurr = self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station]].couleur
-                    if couleurr in COULEURS:
-                        ma_couleur = COULEURS[couleurr]
-                    else:
-                        ma_couleur = ""
-                    boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
+                    # couleurr = self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station]].couleur
+                    # if couleurr in COULEURS:
+                    #     ma_couleur = COULEURS[couleurr]
+                    # else:
+                    #     ma_couleur = ""
+                    boite_operations.append(f"{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}")
                     tous_arrivee = False
                 else:
                     tous_arrivee = False
@@ -177,11 +172,11 @@ class simulateur():
                     journal_opperations[ma_route] = journal_opperations.get(ma_route, 0)
                     max_support_route = self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station]].vois[self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station + 1]]]
 
-                    couleurr = self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station + 1]].couleur
-                    if couleurr in COULEURS:
-                        ma_couleur = COULEURS[couleurr]
-                    else:
-                        ma_couleur = ""
+                    # couleurr = self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station + 1]].couleur
+                    # if couleurr in COULEURS:
+                    #     ma_couleur = COULEURS[couleurr]
+                    # else:
+                    #     ma_couleur = ""
                     if drone_actuelle.chemin[drone_actuelle.index_station + 1] != self.carte.ma_carte.arrivee.nom:
                         i = 0
                         for element in self.listes_drones:
@@ -192,20 +187,90 @@ class simulateur():
                                 drone_actuelle.index_station += 1
                                 if self.carte.ma_carte.zones[drone_actuelle.chemin[drone_actuelle.index_station]].type == "restricted":
                                     drone_actuelle.etat_vol = 1
-                                    boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station - 1]}-{drone_actuelle.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
+                                    boite_operations.append(f"{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station - 1]}-{drone_actuelle.chemin[drone_actuelle.index_station]}")
                                 else:
-                                    boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
+                                    boite_operations.append(f"{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}")
                                 journal_opperations[ma_route] += 1
 
                     elif drone_actuelle.index_station < (len(drone_actuelle.chemin)-1):
                         if journal_opperations[ma_route] < max_support_route:
                             drone_actuelle.index_station += 1
                             journal_opperations[ma_route] += 1
-                            boite_operations.append(f"{ma_couleur}{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}{COULEURS['reset']}")
+                            boite_operations.append(f"{drone_actuelle.nom}-{drone_actuelle.chemin[drone_actuelle.index_station]}")
 
             if len(boite_operations) > 0:
                 historique_boite_operations.append(boite_operations)
         return historique_boite_operations
+
+    def extremes_map(self):
+        max_x = 0
+        max_y = 0
+        for elemet in self.carte.ma_carte.zones.values():
+            if elemet.x > max_x:
+                max_x = elemet.x
+            if elemet.y > max_y:
+                max_y = elemet.y
+        return [max_x, max_y]
+
+    def creation_visuelle_map(self):
+        dimensions = self.extremes_map()
+        max_x = dimensions[0] + 1
+        max_y = dimensions[1] + 1
+        grille = []
+        for i in range(max_y):
+            ligne = []
+            for a in range(max_x):
+                ligne.append("  ")
+            grille.append(ligne)
+
+        for element in self.carte.ma_carte.zones.values():
+            if element == self.carte.ma_carte.depart:
+                grille[element.y][element.x] = "S"
+            elif element == self.carte.ma_carte.arrivee:
+                grille[element.y][element.x] = "A"
+            else:
+                grille[element.y][element.x] = "O"
+        return grille
+
+    def animation_visuelle(self):
+        historique = self.moteur()
+        position_drones = {}
+        # COULEURS = {
+        #             "red": "\033[91m",
+        #             "blue": "\033[94m",
+        #             "green": "\033[92m",
+        #             "reset": "\033[0m",
+        #             "yellow": "\033[93m",
+        #             "cyan": "\033[96m"
+        #         }
+        for drone in self.listes_drones:
+            position_drones[drone.nom] = self.carte.ma_carte.depart.nom
+
+        for tour in historique:
+            map_du_tour = self.creation_visuelle_map()
+            for op in tour:
+                contenue = op.split('-')
+                nom_drone = contenue[0]
+                station_dest = contenue[-1]
+                position_drones[nom_drone] = station_dest
+
+            for cle, value in position_drones.items():
+                # couleurr = self.carte.ma_carte.zones[cle].couleur
+                # # if couleurr in COULEURS:
+                # # #     ma_couleur = COULEURS[couleurr]
+                # # # else:
+                # # #     ma_couleur = ""
+                x = self.carte.ma_carte.zones[value].x
+                y = self.carte.ma_carte.zones[value].y
+                if map_du_tour[y][x] == 'O':
+                    map_du_tour[y][x] = f"[{cle}]"
+                else:
+                    map_du_tour[y][x] = f"{map_du_tour[y][x]}[{cle}]"
+
+            os.system("clear")
+            for ligne in map_du_tour:
+                print("".join(ligne))
+            time.sleep(3)
 
     def eval_chemin(self, chemin, map):
         chrono = 0
@@ -313,3 +378,8 @@ def algo_dijkstra(maap):
 
     chemin_finale.reverse()
     return chemin_finale
+
+
+sss = simulateur("sss.txt")
+# print(sss.moteur())
+sss.animation_visuelle()

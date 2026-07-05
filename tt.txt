@@ -1,0 +1,11 @@
+nb_drones: 4
+
+start_hub: S 0 2 [max_drones=4]
+end_hub: A 6 2 [max_drones=4]
+
+hub: H1 2 2 [color=blue max_drones=4]
+hub: H2 3 2 [color=red max_drones=2 zone=restricted]
+
+connection: S-H1 [max_link_capacity=4]
+connection: H1-H2 [max_link_capacity=4]
+connection: H2-A [max_link_capacity=4]

@@ -1,0 +1,24 @@
+nb_drones: 10
+
+start_hub: S 0 7 [max_drones=5]
+end_hub: A 14 7 [max_drones=5]
+
+hub: H_HAUT_1 4 2 [color=cyan max_drones=2]
+hub: H_HAUT_2 10 2 [color=blue max_drones=2]
+
+hub: H_MID_REST 7 7 [color=red max_drones=1 zone=restricted]
+
+hub: H_BAS_1 4 12 [color=yellow max_drones=2]
+hub: H_BAS_2 10 12 [color=green max_drones=2]
+
+connection: S-H_HAUT_1 [max_link_capacity=2]
+connection: S-H_MID_REST [max_link_capacity=1]
+connection: S-H_BAS_1 [max_link_capacity=2]
+
+connection: H_HAUT_1-H_HAUT_2 [max_link_capacity=2]
+connection: H_HAUT_2-A [max_link_capacity=2]
+
+connection: H_MID_REST-A [max_link_capacity=1]
+
+connection: H_BAS_1-H_BAS_2 [max_link_capacity=2]
+connection: H_BAS_2-A [max_link_capacity=2]
